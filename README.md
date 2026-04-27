@@ -43,6 +43,41 @@
 curl -fsSL https://raw.githubusercontent.com/Hujianboo/codehouse/main/install.sh | sh
 ```
 
+## 常用命令
+
+打开实时城堡：
+
+```sh
+codehouse
+```
+
+显示当前父会话和 subagents 的 crew 城堡：
+
+```sh
+codehouse -crew
+```
+
+更新到 GitHub 上的最新版：
+
+```sh
+codehouse -update
+```
+
+查看当前版本和 GitHub 上的最新版本：
+
+```sh
+codehouse -version
+```
+
+打印一次快照并退出：
+
+```sh
+codehouse --once
+codehouse -crew --once
+```
+
+## 安装细节
+
 安装脚本会把 `codex_house.py` 下载到：
 
 ```sh
@@ -73,43 +108,12 @@ curl -fsSL https://raw.githubusercontent.com/Hujianboo/codehouse/main/install.sh
 curl -fsSL https://raw.githubusercontent.com/Hujianboo/codehouse/main/install.sh | CODEHOUSE_REF=v0.1.0 sh
 ```
 
-## 使用
-
-打开实时 TUI：
-
-```sh
-codehouse
-```
+## 其他用法
 
 在 macOS 新 Terminal 窗口中打开：
 
 ```sh
 codehouse --window
-```
-
-打印一次快照并退出：
-
-```sh
-codehouse --once
-```
-
-查看当前版本和 GitHub 上的最新版本：
-
-```sh
-codehouse -version
-```
-
-从 GitHub 更新到最新版：
-
-```sh
-codehouse -update
-```
-
-显示当前父会话和 subagents 的 crew 城堡：
-
-```sh
-codehouse -crew
-codehouse -crew --once
 ```
 
 显示当天所有 worker/session 城堡：
@@ -119,19 +123,36 @@ codehouse -all
 codehouse -all --once
 ```
 
-## 常用参数
+指定日期：
 
 ```sh
-codehouse --castle-tokens 500000
-codehouse --scale large
 codehouse --date 2026-04-27
-codehouse --refresh 0.5
-codehouse --seconds-per-castle 4
+```
+
+调整城堡尺寸：
+
+```sh
+codehouse --scale small
+codehouse --scale normal
+codehouse --scale large
+codehouse --castle-tokens 500000
+```
+
+调整动画速度：
+
+```sh
 codehouse --pace slow
+codehouse --pace normal
+codehouse --pace fast
+codehouse --seconds-per-castle 4
+codehouse --refresh 0.5
+```
+
+关闭颜色：
+
+```sh
 codehouse --no-color
 codehouse --no-solid
-codehouse -version
-codehouse -update
 ```
 
 完整帮助：
@@ -168,44 +189,14 @@ codehouse -all
 显示当天所有 worker/session 的城堡，包括不同时间启动的父会话。适合看全天活动，
 而不是只看最新的父会话和 subagent 家族。
 
-## 兼容命令
-
-这些旧名字仍然可用：
+## 版本
 
 ```sh
-codex-house
-codehouse --crew
-codehouse --agents
-codehouse --all-agents
-codehouse --all-castles
+codehouse -version
 ```
 
-## 更新机制
-
-`codehouse` 的安装脚本本身也是更新脚本。你可以随时重新运行：
-
-```sh
-curl -fsSL https://raw.githubusercontent.com/Hujianboo/codehouse/main/install.sh | sh
-```
-
-也可以直接运行：
-
-```sh
-codehouse -update
-```
-
-`codehouse -version` 会显示两个版本：
-
-```text
-codehouse local:  0.1.0
-codehouse remote: 0.1.0
-```
-
-如果远程版本更新，它会提示：
-
-```text
-update available: run `codehouse -update`
-```
+会显示本地版本和 GitHub 上的最新版本。如果远程版本更新，它会提示运行
+`codehouse -update`。
 
 版本号来自仓库根目录的 `VERSION` 文件。发布新版本时，更新 `VERSION` 后推送到
 GitHub 即可。
