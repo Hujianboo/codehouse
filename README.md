@@ -8,15 +8,7 @@
   <img src="./assets/demo.gif" alt="codehouse demo" width="760">
 </p>
 
-`codehouse` 是一个 Codex 伴生 TUI。它会读取本机
-`~/.codex/sessions/**/*.jsonl` 里的 `token_count` 事件，把当天的 token
-使用量转换成一座座完成的城堡，以及一座正在施工的城堡。
 
-当 Codex 写入新的 `token_count` 事件时，`codehouse` 不会直接跳到最终数字，
-而是播放一段施工动画：地基、墙体、塔楼、旗帜、窗户、城门，然后变成完整城堡。
-
-`codehouse` 不需要自己的数据库。每次启动都会从本地 Codex session 文件重新计算，
-所以关掉再打开也能恢复当前状态。
 
 ## 功能亮点
 
