@@ -1,0 +1,12 @@
+#!/usr/bin/env sh
+PRG="$0"
+while [ -h "$PRG" ]; do
+  DIR=$(CDPATH= cd -P -- "$(dirname -- "$PRG")" && pwd)
+  LINK=$(readlink "$PRG")
+  case "$LINK" in
+    /*) PRG="$LINK" ;;
+    *) PRG="$DIR/$LINK" ;;
+  esac
+done
+DIR=$(CDPATH= cd -P -- "$(dirname -- "$PRG")" && pwd)
+exec python3 "$DIR/codex_house.py" "$@"
