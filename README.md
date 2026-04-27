@@ -4,18 +4,9 @@
   <strong>把 Codex 的 token 使用量盖成一座座城堡。</strong>
 </p>
 
-<pre align="center">
-<span style="color:#c2410c">       |&gt;&gt;&gt;             |&gt;&gt;&gt;       </span>
-<span style="color:#c2410c">       |                |          </span>
-<span style="color:#d97706">    [__|__]          [__|__]       </span>
-<span style="color:#d97706">    |  <span style="color:#facc15">[]</span> |__________| <span style="color:#facc15">[]</span>  |       </span>
-<span style="color:#d97706">    |     |  <span style="color:#facc15">[]</span>  <span style="color:#facc15">[]</span>  |     |       </span>
-<span style="color:#d97706">    |_____|__________|_____|       </span>
-<span style="color:#92400e">    |#####|   ____   |#####|       </span>
-<span style="color:#92400e">   /______|__|    |__|______\      </span>
-<span style="color:#16a34a">  /____________________________\    </span>
-<span style="color:#16a34a">       /_/              \_\        </span>
-</pre>
+<p align="center">
+  <img src="./assets/demo.gif" alt="codehouse demo" width="760">
+</p>
 
 `codehouse` 是一个 Codex 伴生 TUI。它会读取本机
 `~/.codex/sessions/**/*.jsonl` 里的 `token_count` 事件，把当天的 token
