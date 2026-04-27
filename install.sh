@@ -117,6 +117,13 @@ main() {
   download "${RAW_BASE}/codex_house.py" "$tmp_file"
   mv "$tmp_file" "${INSTALL_DIR}/codex_house.py"
 
+  version_tmp="${INSTALL_DIR}/VERSION.tmp"
+  if download "${RAW_BASE}/VERSION" "$version_tmp"; then
+    mv "$version_tmp" "${INSTALL_DIR}/VERSION"
+  else
+    rm -f "$version_tmp"
+  fi
+
   launcher="${BIN_DIR}/codehouse"
   cat >"$launcher" <<EOF
 #!/usr/bin/env sh

@@ -9,13 +9,21 @@ import json
 import os
 import subprocess
 import sys
+import tempfile
 import time
+import urllib.error
+import urllib.request
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 
 
+CODEHOUSE_REPO = os.environ.get("CODEHOUSE_REPO", "Hujianboo/codehouse")
+CODEHOUSE_REF = os.environ.get("CODEHOUSE_REF", "main")
+CODEHOUSE_RAW_BASE = f"https://raw.githubusercontent.com/{CODEHOUSE_REPO}/{CODEHOUSE_REF}"
+CODEHOUSE_INSTALL_URL = f"{CODEHOUSE_RAW_BASE}/install.sh"
+CODEHOUSE_VERSION_URL = f"{CODEHOUSE_RAW_BASE}/VERSION"
 DEFAULT_HOUSE_TOKENS = 500_000
 DEFAULT_REFRESH_SECONDS = 0.25
 DEFAULT_SECONDS_PER_HOUSE = 10.0
@@ -527,7 +535,11 @@ class UsageTracker:
 
     def apply_session_meta(self, meta: dict, path: Path, state: FileState) -> None:
         session_id = meta.get("id")
-        state.session_id = session_id if isinstance(session_id, str) else path.stem
+        parsed_session_id = session_id if isinstance(session_id, str) else path.stem
+        if state.session_id and parsed_session_id != state.session_id:
+            return
+
+        state.session_id = parsed_session_id
         timestamp = meta.get("timestamp")
         state.started_at = parse_timestamp(timestamp) if isinstance(timestamp, str) else None
 
@@ -535,6 +547,8 @@ class UsageTracker:
         role = meta.get("agent_role")
         state.label = nickname if isinstance(nickname, str) and nickname else None
         state.role = role if isinstance(role, str) and role else None
+        state.parent_thread_id = None
+        state.is_subagent = False
 
         source = meta.get("source")
         spawn = None
@@ -596,6 +610,7 @@ def render_plain(snapshot: UsageSnapshot, day: str, house_tokens: int) -> str:
     lines = [
         "Codex Token Castles",
         f"Date: {day}",
+        "View: all local sessions",
         f"Today: {format_int(tokens)} tokens",
         f"Castles: {completed} complete, {format_int(remainder)}/{format_int(house_tokens)} tokens toward next",
         "",
@@ -653,10 +668,12 @@ def selected_agents(snapshot: UsageSnapshot, day: str, all_castles: bool) -> lis
 def render_agents_plain(snapshot: UsageSnapshot, day: str, house_tokens: int, all_castles: bool) -> str:
     agents = selected_agents(snapshot, day, all_castles)
     scope = "all worker castles" if all_castles else "current crew"
+    total = sum(agent.by_day.get(day, 0) for agent in agents)
     lines = [
         "Codex Token Castles",
         f"Date: {day}",
         f"View: {scope}",
+        f"Total: {format_int(total)} tokens",
     ]
     if not agents:
         lines.append("No token usage for this view.")
@@ -1048,7 +1065,7 @@ def draw_tui(screen: curses.window, args: argparse.Namespace) -> None:
             screen,
             1,
             0,
-            f"{day}  actual {format_int(target_tokens)} tokens  |  building {format_int(display_tokens)} tokens",
+            f"{day}  all local sessions  actual {format_int(target_tokens)} tokens  |  building {format_int(display_tokens)} tokens",
             colors["text"],
         )
         addstr_safe(
@@ -1161,6 +1178,69 @@ def shell_quote(value: str) -> str:
     return "'" + value.replace("'", "'\"'\"'") + "'"
 
 
+def read_local_version() -> str:
+    candidates = [
+        Path(__file__).resolve().with_name("VERSION"),
+        Path(os.environ.get("CODEHOUSE_INSTALL_DIR", "~/.local/share/codehouse")).expanduser() / "VERSION",
+    ]
+    for path in candidates:
+        try:
+            value = path.read_text(encoding="utf-8").strip()
+        except OSError:
+            continue
+        if value:
+            return value
+    return "unknown"
+
+
+def fetch_text(url: str, timeout: float = 5.0) -> str:
+    request = urllib.request.Request(url, headers={"User-Agent": "codehouse"})
+    with urllib.request.urlopen(request, timeout=timeout) as response:
+        return response.read().decode("utf-8").strip()
+
+
+def fetch_remote_version() -> tuple[str | None, str | None]:
+    try:
+        return fetch_text(CODEHOUSE_VERSION_URL), None
+    except (OSError, urllib.error.URLError, TimeoutError) as exc:
+        return None, str(exc)
+
+
+def print_version_info() -> int:
+    local = read_local_version()
+    remote, error = fetch_remote_version()
+    print(f"codehouse local:  {local}")
+    if remote:
+        print(f"codehouse remote: {remote}")
+        if local != "unknown" and local != remote:
+            print("update available: run `codehouse -update`")
+    else:
+        print(f"codehouse remote: unavailable ({error})")
+    return 0
+
+
+def run_update() -> int:
+    print(f"Downloading installer from {CODEHOUSE_INSTALL_URL}")
+    try:
+        installer = fetch_text(CODEHOUSE_INSTALL_URL, timeout=15.0)
+    except (OSError, urllib.error.URLError, TimeoutError) as exc:
+        print(f"codehouse update failed: {exc}", file=sys.stderr)
+        return 1
+
+    with tempfile.NamedTemporaryFile("w", delete=False, encoding="utf-8", prefix="codehouse-install-", suffix=".sh") as handle:
+        handle.write(installer)
+        installer_path = handle.name
+
+    try:
+        result = subprocess.run(["sh", installer_path], check=False)
+        return result.returncode
+    finally:
+        try:
+            os.unlink(installer_path)
+        except OSError:
+            pass
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="codehouse",
@@ -1212,7 +1292,8 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--once", action="store_true", help="Print one snapshot and exit.")
     parser.add_argument(
-        "--crew",
+        "-crew",
+        dest="crew",
         action="store_true",
         help="Show one castle per worker in the current Codex crew.",
     )
@@ -1223,8 +1304,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="Show every worker/session castle for the selected day.",
     )
     parser.add_argument("--all-castles", dest="all_castles", action="store_true", help=argparse.SUPPRESS)
+    parser.add_argument("--crew", dest="crew", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument("--agents", dest="crew", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument("--all-agents", dest="all_castles", action="store_true", help=argparse.SUPPRESS)
+    parser.add_argument("-version", action="store_true", help="Show local and remote codehouse versions.")
+    parser.add_argument("-update", action="store_true", help="Update codehouse from GitHub.")
     parser.add_argument(
         "--window",
         action="store_true",
@@ -1245,6 +1329,11 @@ def main(argv: list[str] | None = None) -> int:
     argv = argv if argv is not None else sys.argv[1:]
     parser = build_parser()
     args = parser.parse_args(argv)
+
+    if args.version:
+        return print_version_info()
+    if args.update:
+        return run_update()
 
     if args.house_tokens is None:
         args.house_tokens = SCALE_HOUSE_TOKENS[args.scale]
